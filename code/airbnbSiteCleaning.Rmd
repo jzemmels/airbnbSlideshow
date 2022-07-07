@@ -1,0 +1,83 @@
+---
+title: "R Notebook"
+---
+
+```{r setup}
+library(tidyverse)
+library(rvest)
+```
+
+```{r}
+siteData <- rvest::read_html("https://www.airbnb.com/s/Colorado--United-States/homes?tab_id=home_tab&refinement_paths%5B%5D=%2Fhomes&query=Colorado%2C%20United%20States&date_picker_type=flexible_dates&flexible_trip_lengths%5B%5D=one_week&adults=1&source=structured_search_input_header&search_type=autocomplete_click")
+
+siteData %>%
+  html_elements("main") %>%
+  html_elements("[class='c4mnd7m dir dir-ltr']") %>%
+  html_elements("div") %>%
+  .[13]
+
+system("taskkill /im java.exe /f", intern=FALSE, ignore.stdout=FALSE)
+# binman::list_versions("chromedriver")
+
+remDr <- RSelenium::rsDriver(browser = "chrome",check = TRUE,chromever = "103.0.5060.24")
+
+remDr$client$navigate("https://www.airbnb.com/s/Colorado--United-States/homes?tab_id=home_tab&refinement_paths%5B%5D=%2Fhomes&query=Colorado%2C%20United%20States&date_picker_type=flexible_dates&flexible_trip_lengths%5B%5D=one_week&adults=1&source=structured_search_input_header&search_type=autocomplete_click")
+
+siteDat <- remDr$client$getPageSource()[[1]] %>%
+  read_html()
+
+remDr$server$stop()
+remDr$client$close()
+
+carouselData <- siteDat%>%
+  html_elements("[itemprop='itemListElement']")
+
+carouselData %>%
+  html_elements("a") %>%
+  html_attr("href") %>%
+  unique()
+
+airbnbImageLinks <- carouselData %>%
+  map_dfr(function(imData){
+    
+    ims <- html_elements(imData,"a")
+    
+    # browser()
+    
+    photoTourLink <- ims %>%
+      html_attr("href") %>%
+      unique()
+    
+    photoTour <- read_html(paste0("https://www.airbnb.com/",photoTourLink,"&modal=PHOTO_TOUR_SCROLLABLE"))
+    
+    imLinks <- photoTour %>%
+      html_elements("source") %>%
+      html_attr("srcset") %>%
+      str_remove("\\?.*$") %>%
+      unique()
+    
+    name <- html_elements(imData,"[itemprop='name']") %>%
+      html_attr("content")
+    
+    link <- paste0("https://www.airbnb.com/",photoTourLink)
+    
+    data.frame(imLinks = imLinks) %>%
+      mutate(name = name,
+             link = link,
+             photoTourLink = photoTourLink)
+    
+  })
+```
+
+### DELETE BELOW ME
+
+```{r}
+dat %>%
+      html_elements("[itemprop='itemListElement']")
+```
+
+```{r}
+dat1%>%
+      html_elements("[itemprop='itemListElement']")
+```
+
